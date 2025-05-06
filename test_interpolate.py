@@ -55,3 +55,14 @@ class TestInter(unittest.TestCase):
         print(repr(y))
         # y0 =
         # np.testing.assert_equal(y, y0)
+
+    def test_sine_overflow(self):
+        num_samples, num_periods, amplitude = 5000, 100, 0x7fff
+        sine = [int(round(np.sin(2 * np.pi * num_periods * i / num_samples) * amplitude)) for i in range(num_samples)]
+        y = []
+        run_simulation(
+            self.dut,
+            [feed(self.dut.input, sine, rate=(1, 10)), retrieve(self.dut.output, y)],
+            vcd_name="sine.vcd",
+        )
+        y = np.ravel(y)

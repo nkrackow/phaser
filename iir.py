@@ -24,6 +24,7 @@ class Dsp(Module):
 
 class Iir(Module):
     def __init__(self, w_coeff, w_data, log2_a0, n_profiles, n_channels):
+        self.log2_a0 = log2_a0
         # input strobe signal (start processing all channels)
         self.stb_in = stb_in = Signal()
         self.stb_out = stb_out = Signal()  # output strobe signal (all channels done)
