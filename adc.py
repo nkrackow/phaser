@@ -1,7 +1,7 @@
 from collections import namedtuple
-from migen.genlib.io import DifferentialInput, DifferentialOutput, DDROutput
-from migen import *
 
+from migen import *
+from migen.genlib.io import DDROutput, DifferentialInput, DifferentialOutput
 
 # all times in cycles
 AdcParams = namedtuple(
@@ -34,7 +34,10 @@ class Adc(Module):
         self.params = p = params  # ADCParams
         self.data = [
             Signal((p.width, True), reset_less=True) for _ in range(p.channels)
-        ]  # retrieved ADC data
+        ]  # ADC output data
+        self.data_inv = [
+            Signal((p.width, True), reset_less=True) for _ in range(p.channels)
+        ]  # retrieved ADC data (inverted)
         self.start = Signal()  # start conversion and reading
         self.reading = Signal()  # data is being read (outputs are invalid)
         self.done = Signal()  # data is valid and a new conversion can be started
@@ -128,6 +131,10 @@ class Adc(Module):
             self.sync += [
                 If(
                     update,
-                    Cat(reversed([self.data[i * k + j] for j in range(k)])).eq(sdo_sr),
+                    # flip the sign when latching out
+                    [d.eq(~d_inv + 1) for d, d_inv in zip(self.data, self.data_inv)],
                 )
+            ]
+            self.comb += [
+                Cat(reversed([self.data_inv[i * k + j] for j in range(k)])).eq(sdo_sr)
             ]
