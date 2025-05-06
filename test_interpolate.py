@@ -1,6 +1,6 @@
-import numpy as np
 import unittest
 
+import numpy as np
 from migen import *
 
 import interpolate
@@ -57,8 +57,16 @@ class TestInter(unittest.TestCase):
         # np.testing.assert_equal(y, y0)
 
     def test_sine_overflow(self):
-        num_samples, num_periods, amplitude = 5000, 100, 0x7fff
-        sine = [int(round(np.sin(2 * np.pi * num_periods * i / num_samples) * amplitude)) for i in range(num_samples)]
+        # sine has the zero crossing at 0 so no hard edge
+        sps = 1e9 / 20  # interpolation rate 20
+
+        num_samples = 1000
+        amplitude = (1 << 13) - 1
+        freq = 1.2e6
+        sine = [
+            int(round(np.sin(2 * np.pi * i * freq / sps) * amplitude))
+            for i in range(num_samples)
+        ]
         y = []
         run_simulation(
             self.dut,
@@ -66,3 +74,7 @@ class TestInter(unittest.TestCase):
             vcd_name="sine.vcd",
         )
         y = np.ravel(y)
+        # prev sample is close to +1 and current is below one
+        assert not any(
+            prev >= 0x7FF0 and current <= 0 for prev, current in zip(y[:-1], y[1:])
+        )
