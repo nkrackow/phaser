@@ -5,6 +5,7 @@
 # Note: Migen translates the "out of range" pc mux selector to the last vaid mux input.
 
 from ast import Constant
+
 from migen import *
 
 N_COEFF = 3  # [b0, b1, a0] number of coefficients for a first order iir
@@ -18,8 +19,14 @@ class Dsp(Module):
         self.c = c = Signal((48, True), reset_less=True)
         self.mux_p = mux_p = Signal()  # accumulator mux
         self.m = m = Signal((48, True), reset_less=True)
+        self.mult_out = mult_out = Signal.like(m)
         self.p = p = Signal((48, True), reset_less=True)
-        self.sync += [m.eq(a * b), p.eq(m + c), If(mux_p, p.eq(m + p))]
+        self.comb += mult_out.eq(a * b)
+        self.sync += [
+            m.eq(Cat(mult_out, [mult_out[-1]] * (len(m) - len(a) - len(b)))),
+            p.eq(m + c),
+            If(mux_p, p.eq(m + p)),
+        ]
 
 
 class Iir(Module):
@@ -50,7 +57,7 @@ class Iir(Module):
 
         ###
 
-        # Making these registers reset less results in worsend timing.
+        # Making these registers reset less results in worse timing.
         # y1 register unique for each profile
         y1 = Array(
             Array(Signal((w_data, True)) for _ in range(n_channels))
@@ -73,7 +80,7 @@ class Iir(Module):
         # 2(4) ->                                         p2=p1+m2
         # 3(5) ->                                                      retrieve data y0=clip(p2)?hold
         step = Signal(2)  # computation step
-        ch_profile_last_ch = Signal(max=n_profiles + 1)  # auxillary signal for muxing
+        ch_profile_last_ch = Signal(max=n_profiles + 1)  # auxiliary signal for muxing
         self.submodules.dsp = dsp = Dsp()
         assert w_data <= len(dsp.b)
         assert w_coeff <= len(dsp.a)
@@ -91,7 +98,14 @@ class Iir(Module):
             dsp.b.eq(
                 x[channel_index][step] << shift_b
             ),  # overwritten later if at step==2
-            dsp.c.eq(Cat(c_rounding_offset, offset[profile_index][channel_index])),
+            dsp.c.eq(
+                Cat(
+                    c_rounding_offset,
+                    offset[profile_index][channel_index],
+                    [offset[profile_index][channel_index][-1]]  # extend sign bit
+                    * (len(dsp.c) - len(dsp.a) - len(dsp.b) + (w_data - log2_a0)),
+                )
+            ),
             If(
                 stb_in & ~busy,
                 busy.eq(1),
