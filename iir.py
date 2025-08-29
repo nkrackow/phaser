@@ -79,8 +79,6 @@ class Iir(Module):
         assert w_data <= len(dsp.b)
         assert w_coeff <= len(dsp.a)
         shift_c = len(dsp.a) + len(dsp.b) - w_data
-        print(shift_c)
-        print(w_data)
         shift_a = len(dsp.a) - w_coeff
         shift_b = len(dsp.b) - w_data
         # +1 from standard sign bit
