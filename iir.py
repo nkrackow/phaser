@@ -22,7 +22,9 @@ class Dsp(Module):
         self.p = p = Signal((48, True), reset_less=True)
         self.comb += mult_out.eq(a * b)
         self.sync += [
-            m.eq(Cat(mult_out, [mult_out[-1]] * (len(m) - len(a) - len(b)))),
+            m.eq(
+                Cat(mult_out, [mult_out[-1]] * (len(m) - len(a) - len(b)))
+            ),  # extend sign bit
             p.eq(m + c),
             If(mux_p, p.eq(m + p)),
         ]
