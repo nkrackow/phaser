@@ -1,11 +1,10 @@
-# First order IIR filter for multiple channels and profiles with one DSP and no blockram.
+# First order IIR filter for multiple channels and profiles with one DSP and no block ram.
 # DSP block with MSB aligned inputs and "round half down" rounding.
 #
 #
-# Note: Migen translates the "out of range" pc mux selector to the last vaid mux input.
+# Note: Migen translates the "out of range" pc mux selector to the last valid mux input.
 
 from ast import Constant
-
 from migen import *
 
 N_COEFF = 3  # [b0, b1, a0] number of coefficients for a first order iir
