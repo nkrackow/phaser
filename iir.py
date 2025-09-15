@@ -5,7 +5,6 @@
 # Note: Migen translates the "out of range" pc mux selector to the last valid mux input.
 
 from ast import Constant
-
 from migen import *
 
 N_COEFF = 3  # [b0, b1, a1] number of coefficients for a first order iir
@@ -16,9 +15,9 @@ class Dsp(Module):
         # xilinx dsp architecture (subset)
         self.a = a = Signal((25, True), reset_less=True)
         self.b = b = Signal((18, True), reset_less=True)
-        self.c = c = Signal((len(a) + len(b), True), reset_less=True)
+        self.c = c = Signal((41, True), reset_less=True)
         self.mux_p = mux_p = Signal()  # accumulator mux
-        self.m = m = Signal((len(a) + len(b), True), reset_less=True)
+        self.m = m = Signal((43, True), reset_less=True)
         self.p = p = Signal((48, True), reset_less=True)
         self.sync += [m.eq(a * b), p.eq(m + c), If(mux_p, p.eq(m + p))]
 
@@ -78,7 +77,7 @@ class Iir(Module):
         self.submodules.dsp = dsp = Dsp()
         assert w_data <= len(dsp.b)
         assert w_coeff <= len(dsp.a)
-        shift_c = len(dsp.a) + len(dsp.b) - w_data
+        shift_c = len(dsp.a) + len(dsp.b) - w_data - (w_data - log2_a0)
         shift_a = len(dsp.a) - w_coeff
         shift_b = len(dsp.b) - w_data
         # +1 from standard sign bit
@@ -133,7 +132,7 @@ class Iir(Module):
             ch_profile_last_ch.eq(ch_profile[channel_index - 1]),
             [o.eq(y1[ch_profile[ch]][ch]) for ch, o in enumerate(outp)],
             # clipping to positive output range
-            y0_clipped.eq(dsp.p >> (shift_c - (w_data - log2_a0))),
+            y0_clipped.eq(dsp.p >> shift_c),
             If(
                 dsp.p[-n_sign:] != 0,  # if out of output range
                 y0_clipped.eq((1 << w_data - 1) - 1),
